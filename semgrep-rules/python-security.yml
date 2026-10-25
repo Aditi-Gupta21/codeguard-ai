@@ -1,0 +1,7 @@
+rules:
+  - id: python-dangerous-eval
+    languages:
+      - python
+    severity: WARNING
+    message: "Use of eval() can execute arbitrary code. Avoid evaluating untrusted input."
+    pattern: eval(...)
