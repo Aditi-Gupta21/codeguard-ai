@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 
 function App() {
-  const [message, setMessage] = useState(
-    "Connecting to backend..."
-  );
+  const [message, setMessage] = useState("Connecting to backend...");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -16,6 +14,7 @@ function App() {
       })
       .then((data) => {
         setMessage(data.message);
+        setError("");
       })
       .catch(() => {
         setError("Unable to connect to the backend.");
@@ -23,9 +22,11 @@ function App() {
   }, []);
 
   return (
-    <main style={{ padding: "32px", fontFamily: "Arial" }}>
+    <main style={{ padding: "32px", fontFamily: "Arial, sans-serif" }}>
       <h1>CodeGuard AI</h1>
-      <p>AI-Powered Software Engineering Agent</p>
+      <p>AI-powered code analysis and security assistant</p>
+
+      <hr />
 
       <h2>Backend Connection</h2>
 
