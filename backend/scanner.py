@@ -86,16 +86,52 @@ def scan_code(source_code: str) -> list[dict]:
             if isinstance(start_line, int) and 1 <= start_line <= len(source_lines):
                 snippet = source_lines[start_line - 1]
 
+
+            rule_id = finding.get("check_id", "").split(".")[-1]
+
+            remediation_guidance = {
+                "python-dangerous-eval": (
+                    "Avoid eval() on untrusted input. Use safer alternatives such as "
+                    "ast.literal_eval() for supported Python literals, or parse the "
+                    "specific input format explicitly."
+                ),
+                "python-hardcoded-secret": (
+                    "Move passwords, API keys, and tokens into environment variables "
+                    "or a dedicated secrets manager. Rotate any real exposed credentials."
+                ),
+                "python-sql-injection-fstring": (
+                    "Use parameterized SQL queries supported by your database driver. "
+                    "Do not insert untrusted input directly into SQL strings."
+                ),
+                "python-unsafe-pickle": (
+                    "Avoid deserializing untrusted data with pickle. Prefer a safer "
+                    "format such as JSON and validate the parsed data."
+                ),
+            }
+
+            security_categories = {
+                "python-dangerous-eval": "Code Injection",
+                "python-hardcoded-secret": "Hardcoded Secrets",
+                "python-sql-injection-fstring": "SQL Injection",
+                "python-unsafe-pickle": "Unsafe Deserialization",
+            }
+
             findings.append(
                 {
-                    "rule_id": finding.get("check_id", "").split(".")[-1],
+                    "rule_id": rule_id,
                     "severity": extra.get("severity", "INFO"),
+                    "category": security_categories.get(rule_id, "Security"),
                     "message": extra.get("message", ""),
+                    "remediation": remediation_guidance.get(
+                        rule_id,
+                        "Review this finding and follow secure coding practices."
+                    ),
                     "file_path": "sample.py",
                     "start_line": start_line,
                     "end_line": end_line,
                     "code_snippet": snippet,
                 }
             )
+
 
         return findings

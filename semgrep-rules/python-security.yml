@@ -5,3 +5,38 @@ rules:
     severity: WARNING
     message: "Use of eval() can execute arbitrary code. Avoid evaluating untrusted input."
     pattern: eval(...)
+
+  - id: python-hardcoded-secret
+    languages:
+      - python
+    severity: WARNING
+    message: "Potential hardcoded secret detected. Use environment variables or a secrets manager instead."
+    patterns:
+      - pattern-either:
+          - pattern: $KEY = "$VALUE"
+          - pattern: $KEY = '$VALUE'
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: (?i).*(password|passwd|secret|api_key|apikey|token).*
+      - metavariable-regex:
+          metavariable: $VALUE
+          regex: (?i)^(?!.*(example|placeholder|your_|changeme|dummy|test)).{8,}$
+
+  - id: python-sql-injection-fstring
+    languages:
+      - python
+    severity: WARNING
+    message: "Potential SQL injection: an f-string is used to construct a SQL query. Use parameterized queries instead."
+    patterns:
+      - pattern: $QUERY = f"..."
+      - metavariable-regex:
+          metavariable: $QUERY
+          regex: (?i).*(query|sql).*
+
+
+  - id: python-unsafe-pickle
+    languages:
+      - python
+    severity: ERROR
+    message: "Unsafe deserialization: pickle.loads() can execute code when processing untrusted data. Use a safer data format such as JSON for untrusted input."
+    pattern: pickle.loads(...)
