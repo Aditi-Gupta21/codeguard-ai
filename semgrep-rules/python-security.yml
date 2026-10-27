@@ -26,13 +26,17 @@ rules:
     languages:
       - python
     severity: WARNING
-    message: "Potential SQL injection: an f-string is used to construct a SQL query. Use parameterized queries instead."
+    message: "Potential SQL injection: user-controlled data is incorporated into a SQL query string. Use parameterized queries instead."
     patterns:
-      - pattern: $QUERY = f"..."
+      - pattern-either:
+          - pattern: $QUERY = $SQL
+          - pattern: $CURSOR.execute($SQL)
+      - metavariable-pattern:
+          metavariable: $SQL
+          pattern: f"...{...}..."
       - metavariable-regex:
-          metavariable: $QUERY
-          regex: (?i).*(query|sql).*
-
+          metavariable: $SQL
+          regex: (?is).*?(select|insert|update|delete|drop|alter|create).*?(from|into|where|set|table|database).*
 
   - id: python-unsafe-pickle
     languages:
@@ -40,3 +44,27 @@ rules:
     severity: ERROR
     message: "Unsafe deserialization: pickle.loads() can execute code when processing untrusted data. Use a safer data format such as JSON for untrusted input."
     pattern: pickle.loads(...)
+
+  - id: python-command-injection
+    languages:
+      - python
+    severity: ERROR
+    message: "Unsafe command execution: a shell command is being constructed or executed with untrusted input. Avoid shell=True and validate or avoid user-controlled command fragments."
+    patterns:
+      - pattern-either:
+          - pattern: os.system(...)
+          - pattern: subprocess.run(..., shell=True, ...)
+          - pattern: subprocess.Popen(..., shell=True, ...)
+          - pattern: subprocess.call(..., shell=True, ...)
+          - pattern: subprocess.check_output(..., shell=True, ...)
+          - pattern: subprocess.check_call(..., shell=True, ...)
+
+  - id: python-unsafe-tempfile
+    languages:
+      - python
+    severity: WARNING
+    message: "Insecure temporary-file creation: mktemp() is predictable and can be exploited for symlink and race attacks. Use tempfile.NamedTemporaryFile() or trusted secure temporary directory APIs instead."
+    patterns:
+      - pattern-either:
+          - pattern: tempfile.mktemp(...)
+          - pattern: tempfile.NamedTemporaryFile(delete=False, ...)
