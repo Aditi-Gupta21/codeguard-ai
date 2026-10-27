@@ -1,19 +1,33 @@
 import json
+import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 # Project root: the directory containing backend/
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RULES_FILE = PROJECT_ROOT / "semgrep-rules" / "python-security.yml"
-SEMGREP_EXECUTABLE = (
-    Path.home()
-    / "AppData"
-    / "Local"
-    / "CodeGuardSemgrep"
-    / "Scripts"
-    / "pysemgrep.exe"
-)
+
+
+def _resolve_semgrep_command() -> list[str]:
+    """Resolve the active Semgrep executable without relying on a user-specific path."""
+    candidates = []
+
+    semgrep_path = shutil.which("semgrep")
+    if semgrep_path:
+        candidates.append(semgrep_path)
+
+    venv_scripts = Path(sys.executable).resolve().parent
+    for candidate_name in ("semgrep.exe", "pysemgrep.exe"):
+        local_script = venv_scripts / candidate_name
+        if local_script.exists():
+            candidates.append(str(local_script))
+
+    if candidates:
+        return [candidates[0]]
+
+    return [str(venv_scripts / "semgrep.exe")]
 
 
 def scan_code(source_code: str) -> list[dict]:
@@ -22,13 +36,11 @@ def scan_code(source_code: str) -> list[dict]:
     if not RULES_FILE.is_file():
         raise RuntimeError(f"Semgrep rules file not found: {RULES_FILE}")
 
-    # Create a temporary Python file. The submitted code is never executed.
     with tempfile.TemporaryDirectory(prefix="codeguard-") as temp_dir:
         source_file = Path(temp_dir) / "sample.py"
         source_file.write_text(source_code, encoding="utf-8")
 
-        command = [
-            str(SEMGREP_EXECUTABLE),
+        command = _resolve_semgrep_command() + [
             "scan",
             "--config",
             str(RULES_FILE),
@@ -51,9 +63,17 @@ def scan_code(source_code: str) -> list[dict]:
             raise RuntimeError("Semgrep scan timed out.") from exc
         except OSError as exc:
             raise RuntimeError(
-                "Could not start Semgrep. Check that it is installed "
-                "in the active Python environment."
+                "Could not start Semgrep. Install it in the active Python environment or add it to PATH."
             ) from exc
+
+        if result.returncode != 0:
+            detail = result.stderr.strip() or result.stdout.strip() or "Semgrep could not run."
+            if "No module named semgrep" in detail or "not recognized" in detail.lower():
+                raise RuntimeError(
+                    "Semgrep is not installed in the active Python environment. Install it with: "
+                    f"{sys.executable} -m pip install semgrep"
+                )
+            raise RuntimeError(f"Semgrep scan failed: {detail}")
 
         try:
             report = json.loads(result.stdout)
@@ -61,14 +81,12 @@ def scan_code(source_code: str) -> list[dict]:
             detail = result.stderr.strip() or "No diagnostic output available."
             raise RuntimeError(f"Semgrep returned invalid JSON: {detail}") from exc
 
-        if result.returncode != 0 or report.get("errors"):
+        if report.get("errors"):
             details = "; ".join(
                 error.get("message", error.get("short_msg", "Unknown error"))
                 for error in report.get("errors", [])
             )
-            raise RuntimeError(
-                f"Semgrep scan failed: {details or result.stderr.strip()}"
-            )
+            raise RuntimeError(f"Semgrep scan failed: {details}")
 
         findings = []
         source_lines = source_code.splitlines()
@@ -81,11 +99,9 @@ def scan_code(source_code: str) -> list[dict]:
             start_line = start.get("line")
             end_line = end.get("line")
 
-            # Use the submitted source instead of Semgrep's unavailable snippet.
             snippet = ""
             if isinstance(start_line, int) and 1 <= start_line <= len(source_lines):
                 snippet = source_lines[start_line - 1]
-
 
             rule_id = finding.get("check_id", "").split(".")[-1]
 
@@ -107,6 +123,14 @@ def scan_code(source_code: str) -> list[dict]:
                     "Avoid deserializing untrusted data with pickle. Prefer a safer "
                     "format such as JSON and validate the parsed data."
                 ),
+                "python-command-injection": (
+                    "Avoid building shell commands from user-controlled input. Prefer direct "
+                    "API calls and avoid shell=True unless absolutely necessary."
+                ),
+                "python-unsafe-tempfile": (
+                    "Use secure temporary-file APIs or create files only in trusted directories; "
+                    "avoid mktemp() and other predictable temporary paths."
+                ),
             }
 
             security_categories = {
@@ -114,6 +138,8 @@ def scan_code(source_code: str) -> list[dict]:
                 "python-hardcoded-secret": "Hardcoded Secrets",
                 "python-sql-injection-fstring": "SQL Injection",
                 "python-unsafe-pickle": "Unsafe Deserialization",
+                "python-command-injection": "Command Injection",
+                "python-unsafe-tempfile": "Insecure File Handling",
             }
 
             findings.append(
@@ -124,7 +150,7 @@ def scan_code(source_code: str) -> list[dict]:
                     "message": extra.get("message", ""),
                     "remediation": remediation_guidance.get(
                         rule_id,
-                        "Review this finding and follow secure coding practices."
+                        "Review this finding and follow secure coding practices.",
                     ),
                     "file_path": "sample.py",
                     "start_line": start_line,
@@ -132,6 +158,5 @@ def scan_code(source_code: str) -> list[dict]:
                     "code_snippet": snippet,
                 }
             )
-
 
         return findings

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+const API_BASE_URL = "http://127.0.0.1:8001";
+
 function App() {
   const [message, setMessage] = useState("Connecting to backend...");
   const [error, setError] = useState("");
@@ -24,7 +26,7 @@ function App() {
   ).length;
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/")
+    fetch(`${API_BASE_URL}/`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Backend request failed");
@@ -47,7 +49,7 @@ function App() {
     setScanned(false);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/scan", {
+      const response = await fetch(`${API_BASE_URL}/scan`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
