@@ -2,9 +2,11 @@
 .venv/
 backend/.venv/
 
-# Python cache
+# Python cache and test artifacts
 __pycache__/
 *.py[cod]
+.pytest_cache/
+backend/.pytest_cache/
 
 # Frontend dependencies and build output
 frontend/node_modules/
