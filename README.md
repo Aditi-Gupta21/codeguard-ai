@@ -1,48 +1,23 @@
 # CodeGuard AI
 
-AI-powered static code analysis and security vulnerability scanner for Python projects.
+> Automated static code analysis and security vulnerability scanner for Python applications.
 
-CodeGuard AI provides automated security scanning for Python source code using [Semgrep](https://semgrep.dev/) static analysis combined with specialized security rules. It pinpoints vulnerabilities, categorizes risk levels, offers actionable remediation guidance, and exports structured reports for auditing and CI/CD pipelines.
-
----
-
-## Table of Contents
-
-- [Features](#features)
-- [System Architecture](#system-architecture)
-- [Supported Vulnerability Rules](#supported-vulnerability-rules)
-- [Finding Quality & Reliability](#finding-quality--reliability)
-- [Technology Stack](#technology-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Backend Setup](#backend-setup)
-  - [Frontend Setup](#frontend-setup)
-- [Testing](#testing)
-- [API Reference](#api-reference)
-  - [GET /](#get-)
-  - [GET /health](#get-health)
-  - [POST /scan](#post-scan)
-  - [POST /scan/report](#post-scanreport)
-- [Scan Report Schema](#scan-report-schema)
-- [Roadmap](#roadmap)
-- [License](#license)
+CodeGuard AI inspects Python source code for security vulnerabilities, insecure design patterns, and exposed secrets using [Semgrep](https://semgrep.dev/) static analysis with tailored rule sets. Findings include actionable remediation advice, line-by-line code context, severity indicators, and downloadable audit reports.
 
 ---
 
 ## Features
 
-- **Static Security Scanning** — Analyzes Python code directly without execution, identifying risks safely in isolated temp directories.
-- **Precision Detection** — Six purpose-built rules targeting high-frequency security pitfalls in Python applications.
-- **Actionable Remediation** — Every finding includes a concrete explanation, line numbers, affected code snippet, and actionable guidance for remediation.
-- **Deduplication Engine** — Eliminates redundant findings sharing the same rule ID, line boundaries, and code snippet.
-- **JSON Report Export** — Download complete audit reports containing metadata, summary counts by severity, and detailed findings.
-- **Interactive Web Dashboard** — Modern React interface featuring real-time connection health checks, code editor, summary metric cards, and responsive finding views.
-- **Comprehensive Test Suite** — Test-driven test suite with true-positive and false-positive test cases for every supported rule.
+- **Static Analysis**: Scans source code safely in isolated temporary workspaces without executing untrusted code.
+- **Vulnerability Detection**: Identifies critical vulnerability classes including SQL injection, command execution, unsafe deserialization, insecure temporary files, hardcoded secrets, and dangerous `eval()` usage.
+- **Actionable Remediation**: Every detection includes step-by-step guidance and recommended secure alternatives.
+- **Deduplication Filter**: Eliminates redundant findings sharing identical rule IDs, line boundaries, and code snippets.
+- **Audit Report Export**: Downloads complete security reports formatted as structured JSON with summary counts by severity.
+- **Live Web Dashboard**: Interactive React frontend featuring real-time health checks, code editor, summary cards, and responsive finding views.
 
 ---
 
-## System Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -53,55 +28,40 @@ CodeGuard AI provides automated security scanning for Python source code using [
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      FastAPI Backend                        │
-│   - POST /scan        -> returns structured findings        │
-│   - POST /scan/report -> returns downloadable JSON report   │
-│   - GET /health       -> liveness probe                     │
+│   - POST /scan        -> Returns structured findings        │
+│   - POST /scan/report -> Returns downloadable JSON report   │
+│   - GET  /health      -> Health probe                       │
 └──────────────────────────────┬──────────────────────────────┘
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Semgrep Scanner Core                     │
-│   - Resolves executable dynamically across environments     │
-│   - Sandboxed temp workspace execution                      │
-│   - Deduplication filter & schema normalizer                │
+│                    Semgrep Scanner Engine                   │
+│   - Sandboxed temporary workspace execution                 │
 │   - Rule definitions: semgrep-rules/python-security.yml     │
+│   - Parse warning tolerance & deduplication normalizer      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Supported Vulnerability Rules
+## Supported Security Rules
 
-CodeGuard AI detects six critical vulnerability patterns:
-
-| Rule ID | Category | Severity | Description |
-|---|---|---|---|
-| `python-dangerous-eval` | Code Injection | `WARNING` | Detects arbitrary code execution via `eval()`. Safe patterns like `ast.literal_eval()` and type casting (`int()`, `float()`) are excluded. |
-| `python-hardcoded-secret` | Hardcoded Secrets | `WARNING` | Detects hardcoded API keys, passwords, and JWT tokens. Excludes placeholder names like `"changeme"` or `"your_api_key_here"`. |
-| `python-sql-injection-fstring` | SQL Injection | `WARNING` | Identifies SQL queries constructed via f-strings or raw string formatting. Recommends parameterized database queries. |
-| `python-unsafe-pickle` | Unsafe Deserialization | `ERROR` | Flags untrusted object deserialization via `pickle.loads()`. Recommends secure serialization formats such as JSON or Protocol Buffers. |
-| `python-command-injection` | Command Injection | `ERROR` | Detects shell executions with user input (`os.system()`, `subprocess.run(..., shell=True)`). Safe list arguments (`subprocess.run(["cmd", "arg"])`) are not flagged. |
-| `python-unsafe-tempfile` | Insecure File Handling | `WARNING` | Catches insecure temporary file creation via `tempfile.mktemp()`. Recommends `NamedTemporaryFile` or `TemporaryDirectory`. |
-
----
-
-## Finding Quality & Reliability
-
-CodeGuard AI enforces strict data quality guarantees:
-
-1. **False-Positive Resistance**: Safe standard library equivalents (`ast.literal_eval`, `json.loads`, parameterized DB calls, list-based `subprocess.run`) pass the scanner cleanly.
-2. **Deterministic Deduplication**: Findings are deduplicated based on `(rule_id, start_line, end_line, code_snippet)` to prevent noisy multi-match reports.
-3. **Consistent Severity Levels**: Severities strictly align with risk (`ERROR` for remote code execution and deserialization exploits, `WARNING` for injection and secret hygiene).
-4. **Normalized Findings**: Every finding guarantees valid integer line numbers, non-empty snippets, category taxonomy, and human-readable remediation advice.
+| Rule ID | Category | Severity | Description | Recommended Remediation |
+|---|---|---|---|---|
+| `python-dangerous-eval` | Code Injection | `WARNING` | Detects arbitrary code execution via `eval()`. | Avoid `eval()` on untrusted input. Use `ast.literal_eval()` for literals or parse structured data explicitly. |
+| `python-hardcoded-secret` | Hardcoded Secrets | `WARNING` | Detects hardcoded API keys, passwords, and tokens. | Store credentials in environment variables or a dedicated secrets manager. Rotate exposed credentials. |
+| `python-sql-injection-fstring` | SQL Injection | `WARNING` | Detects raw SQL queries constructed via f-strings. | Use parameterized database queries supported by your database driver. Never format user strings directly into SQL. |
+| `python-unsafe-pickle` | Unsafe Deserialization | `ERROR` | Flags deserialization of untrusted payloads with `pickle`. | Avoid `pickle` on untrusted data. Use safer interchange formats such as JSON or Protocol Buffers. |
+| `python-command-injection` | Command Injection | `ERROR` | Detects shell executions constructed from user input. | Avoid dynamic shell commands. Prefer list-based execution (`subprocess.run(["cmd", "arg"])`) and avoid `shell=True`. |
+| `python-unsafe-tempfile` | Insecure File Handling | `WARNING` | Catches insecure temporary file paths via `mktemp()`. | Use `tempfile.NamedTemporaryFile` or `tempfile.TemporaryDirectory` to prevent predictable path collisions. |
 
 ---
 
 ## Technology Stack
 
-- **Frontend**: React 19, Vite 8, Plain CSS
 - **Backend**: Python 3.10+, FastAPI, Uvicorn, Pydantic v2
-- **Static Analysis Engine**: Semgrep 1.x
-- **Testing**: pytest, FastAPI TestClient, HTTPX
+- **Scanner Engine**: Semgrep 1.x
+- **Frontend**: React 19, Vite 8, Plain CSS
 
 ---
 
@@ -111,21 +71,19 @@ CodeGuard AI enforces strict data quality guarantees:
 codeguard-ai/
 ├── backend/
 │   ├── main.py              # FastAPI application, routing, and CORS
-│   ├── scanner.py           # Scanner core, Semgrep executor, report builder
-│   ├── test_scanner.py      # Security rule validation test suite (TDD)
-│   ├── test_api.py          # FastAPI endpoint integration tests
-│   └── requirements.txt     # Locked backend dependency specifications
+│   ├── scanner.py           # Scanner core, Semgrep integration, report builder
+│   └── requirements.txt     # Python dependencies
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx          # Dashboard, code input, metrics, export button
-│   │   ├── main.jsx         # React DOM mount point
+│   │   ├── main.jsx         # React application entry point
 │   │   ├── index.css        # Base styling
 │   │   └── App.css          # Application layout styles
-│   ├── index.html           # Single-page application entry HTML
-│   └── package.json         # Frontend scripts and dependencies
+│   ├── index.html           # HTML shell
+│   └── package.json         # Frontend dependencies and scripts
 ├── semgrep-rules/
-│   └── python-security.yml  # Semgrep YAML rule definitions
-├── .gitignore               # Ignored artifacts, virtual environments, caches
+│   └── python-security.yml  # Semgrep YAML security rules
+├── .gitignore               # Ignored environments, caches, and build outputs
 └── README.md                # Project documentation
 ```
 
@@ -139,69 +97,44 @@ codeguard-ai/
 - **Node.js**: 18.0 or higher
 - **npm**: 9.0 or higher
 
-### Backend Setup
-
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-
-2. Create and activate a virtual environment:
-   ```bash
-   # Windows (PowerShell)
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-
-   # macOS / Linux
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-
-3. Install required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Start the development server:
-   ```bash
-   uvicorn main:app --reload --port 8001
-   ```
-
-The backend server will run at `http://127.0.0.1:8001`.
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-
-2. Install Node dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the Vite development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open `http://localhost:5173` in your browser.
-
----
-
-## Testing
-
-The project uses `pytest` for rigorous test-driven validation, covering individual rules, false-positive resistance, deduplication, and full HTTP endpoint integration.
-
-Run the complete test suite:
+### 1. Backend Setup
 
 ```bash
 cd backend
-pytest test_scanner.py test_api.py -v
+
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+# Windows (PowerShell):
+.\.venv\Scripts\Activate.ps1
+# macOS / Linux:
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the API server
+uvicorn main:app --reload --port 8001
 ```
 
-All 48 test cases test against real Semgrep execution and FastAPI endpoints.
+The API will be accessible at `http://127.0.0.1:8001`.
+
+### 2. Frontend Setup
+
+In a separate terminal:
+
+```bash
+cd frontend
+
+# Install Node dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser.
 
 ---
 
@@ -209,9 +142,13 @@ All 48 test cases test against real Semgrep execution and FastAPI endpoints.
 
 ### `GET /`
 
-Root status endpoint verifying backend connectivity.
+Root connectivity probe.
 
-**Response:**
+```bash
+curl http://127.0.0.1:8001/
+```
+
+**Response (`200 OK`):**
 ```json
 {
   "message": "CodeGuard AI backend is running!"
@@ -222,9 +159,13 @@ Root status endpoint verifying backend connectivity.
 
 ### `GET /health`
 
-Liveness and health monitoring check.
+Health check endpoint.
 
-**Response:**
+```bash
+curl http://127.0.0.1:8001/health
+```
+
+**Response (`200 OK`):**
 ```json
 {
   "status": "healthy"
@@ -235,16 +176,15 @@ Liveness and health monitoring check.
 
 ### `POST /scan`
 
-Executes static analysis on the submitted Python source code.
+Scans Python code and returns individual findings.
 
-**Request Body:**
-```json
-{
-  "code": "user_input = input('Command: ')\nos.system(user_input)"
-}
+```bash
+curl -X POST http://127.0.0.1:8001/scan \
+  -H "Content-Type: application/json" \
+  -d '{"code": "import os\nos.system(\"rm -rf \" + user_input)"}'
 ```
 
-**Response:**
+**Response (`200 OK`):**
 ```json
 {
   "findings": [
@@ -257,7 +197,7 @@ Executes static analysis on the submitted Python source code.
       "file_path": "sample.py",
       "start_line": 2,
       "end_line": 2,
-      "code_snippet": "os.system(user_input)"
+      "code_snippet": "os.system(\"rm -rf \" + user_input)"
     }
   ],
   "total_findings": 1
@@ -268,34 +208,42 @@ Executes static analysis on the submitted Python source code.
 
 ### `POST /scan/report`
 
-Generates and serves a downloadable JSON security report with aggregate summary statistics.
+Scans Python code and returns a complete downloadable JSON report with summary statistics.
 
-**Headers Returned:**
-`Content-Disposition: attachment; filename="codeguard-report.json"`
+```bash
+curl -X POST http://127.0.0.1:8001/scan/report \
+  -H "Content-Type: application/json" \
+  -d '{"code": "eval(input())"}'
+```
 
-**Response Body:**
+**Response Headers:**
+```
+Content-Disposition: attachment; filename="codeguard-report.json"
+```
+
+**Response Body (`200 OK`):**
 ```json
 {
   "report_version": "1.0",
-  "generated_at": "2026-10-28T14:40:00+00:00",
+  "generated_at": "2026-10-28T14:50:00+00:00",
   "scanner": "CodeGuard AI / Semgrep",
   "summary": {
     "total_findings": 1,
     "severity_counts": {
-      "ERROR": 1
+      "WARNING": 1
     }
   },
   "findings": [
     {
-      "rule_id": "python-command-injection",
-      "severity": "ERROR",
-      "category": "Command Injection",
-      "message": "Dynamic input executed in shell command can lead to command injection.",
-      "remediation": "Avoid building shell commands from user-controlled input. Prefer direct API calls and avoid shell=True unless absolutely necessary.",
+      "rule_id": "python-dangerous-eval",
+      "severity": "WARNING",
+      "category": "Code Injection",
+      "message": "Use of eval() can execute arbitrary code with the current process privileges.",
+      "remediation": "Avoid eval() on untrusted input. Use safer alternatives such as ast.literal_eval() for supported Python literals, or parse the specific input format explicitly.",
       "file_path": "sample.py",
-      "start_line": 2,
-      "end_line": 2,
-      "code_snippet": "os.system(user_input)"
+      "start_line": 1,
+      "end_line": 1,
+      "code_snippet": "eval(input())"
     }
   ]
 }
@@ -305,39 +253,36 @@ Generates and serves a downloadable JSON security report with aggregate summary 
 
 ## Scan Report Schema
 
-Exported reports adhere to the following contract:
+Exported reports adhere to the following structure:
 
-```typescript
-interface ScanReport {
-  report_version: string;       // Schema version, e.g., "1.0"
-  generated_at: string;         // ISO 8601 UTC timestamp
-  scanner: string;              // Scanner engine identifier
-  summary: {
-    total_findings: number;
-    severity_counts: Record<"ERROR" | "WARNING" | "INFO", number>;
-  };
-  findings: Array<{
-    rule_id: string;
-    severity: "ERROR" | "WARNING" | "INFO";
-    category: string;
-    message: string;
-    remediation: string;
-    file_path: string;
-    start_line: number;
-    end_line: number;
-    code_snippet: string;
-  }>;
+```json
+{
+  "report_version": "1.0",
+  "generated_at": "ISO-8601 UTC Timestamp",
+  "scanner": "CodeGuard AI / Semgrep",
+  "summary": {
+    "total_findings": 0,
+    "severity_counts": {
+      "ERROR": 0,
+      "WARNING": 0,
+      "INFO": 0
+    }
+  },
+  "findings": [
+    {
+      "rule_id": "string",
+      "severity": "ERROR | WARNING | INFO",
+      "category": "string",
+      "message": "string",
+      "remediation": "string",
+      "file_path": "string",
+      "start_line": 1,
+      "end_line": 1,
+      "code_snippet": "string"
+    }
+  ]
 }
 ```
-
----
-
-## Roadmap
-
-- [ ] **AI-Assisted Autofix**: Integration with LLM APIs to generate syntax-accurate pull requests and remediation diffs.
-- [ ] **Multi-File & Repository Scanning**: Upload ZIP archives or point to GitHub repositories for project-wide scans.
-- [ ] **SARIF & PDF Exports**: Export findings to GitHub Code Scanning SARIF format and downloadable audit PDFs.
-- [ ] **Custom Rule Builder**: In-browser YAML rule creation with immediate syntax validation.
 
 ---
 

@@ -147,10 +147,24 @@ def scan_code(source_code: str) -> list[dict]:
             detail = result.stderr.strip() or "No diagnostic output available."
             raise RuntimeError(f"Semgrep returned invalid JSON: {detail}") from exc
 
-        if report.get("errors"):
+        fatal_errors = []
+        for error in report.get("errors", []):
+            error_level = str(error.get("level", "")).lower()
+            error_type = error.get("type")
+            # Semgrep reports file parse/syntax issues with level="warn" or type containing "Parsing"
+            is_parse_issue = (
+                error_level == "warn"
+                or (isinstance(error_type, list) and len(error_type) > 0 and "parsing" in str(error_type[0]).lower())
+                or "syntax error" in str(error.get("message", "")).lower()
+                or "parse error" in str(error.get("message", "")).lower()
+            )
+            if not is_parse_issue:
+                fatal_errors.append(error)
+
+        if fatal_errors:
             details = "; ".join(
                 error.get("message", error.get("short_msg", "Unknown error"))
-                for error in report.get("errors", [])
+                for error in fatal_errors
             )
             raise RuntimeError(f"Semgrep scan failed: {details}")
 
@@ -198,7 +212,7 @@ def build_report(findings: list[dict]) -> dict:
     """Build a structured scan report suitable for JSON export."""
     severity_counts: dict[str, int] = {}
     for finding in findings:
-        sev = finding.get("severity", "INFO").upper()
+        sev = (finding.get("severity") or "INFO").upper()
         severity_counts[sev] = severity_counts.get(sev, 0) + 1
 
     return {
