@@ -12,6 +12,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [scanError, setScanError] = useState("");
   const [scanned, setScanned] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const errorCount = findings.filter(
     (finding) => finding.severity?.toUpperCase() === "ERROR"
@@ -73,6 +74,45 @@ function App() {
       setScanError(err.message || "Unable to scan the code.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/scan/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          typeof data.detail === "string"
+            ? data.detail
+            : "Export failed."
+        );
+      }
+
+      const report = await response.json();
+      const blob = new Blob([JSON.stringify(report, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "codeguard-report.json";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setScanError(err.message || "Unable to export report.");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -181,23 +221,45 @@ function App() {
           }}
         />
 
-        <button
-          onClick={handleScan}
-          disabled={loading || !code.trim()}
-          style={{
-            marginTop: "16px",
-            padding: "12px 22px",
-            border: "none",
-            borderRadius: "6px",
-            backgroundColor: loading ? "#9ca3af" : "#2563eb",
-            color: "#ffffff",
-            fontSize: "15px",
-            fontWeight: "bold",
-            cursor: loading || !code.trim() ? "not-allowed" : "pointer",
-          }}
-        >
-          {loading ? "Scanning..." : "Scan Code"}
-        </button>
+        <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+          <button
+            id="scan-button"
+            onClick={handleScan}
+            disabled={loading || !code.trim()}
+            style={{
+              padding: "12px 22px",
+              border: "none",
+              borderRadius: "6px",
+              backgroundColor: loading ? "#9ca3af" : "#2563eb",
+              color: "#ffffff",
+              fontSize: "15px",
+              fontWeight: "bold",
+              cursor: loading || !code.trim() ? "not-allowed" : "pointer",
+            }}
+          >
+            {loading ? "Scanning..." : "Scan Code"}
+          </button>
+
+          {scanned && (
+            <button
+              id="export-button"
+              onClick={handleExport}
+              disabled={exporting || !code.trim()}
+              style={{
+                padding: "12px 22px",
+                border: "1px solid #2563eb",
+                borderRadius: "6px",
+                backgroundColor: exporting ? "#e5e7eb" : "#ffffff",
+                color: "#2563eb",
+                fontSize: "15px",
+                fontWeight: "bold",
+                cursor: exporting || !code.trim() ? "not-allowed" : "pointer",
+              }}
+            >
+              {exporting ? "Exporting..." : "Export JSON Report"}
+            </button>
+          )}
+        </div>
 
         {scanError && (
           <p
