@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "http://127.0.0.1:8001";
 
 function App() {
   const [message, setMessage] = useState("Connecting to backend...");
@@ -14,6 +14,7 @@ function App() {
   const [scanError, setScanError] = useState("");
   const [scanned, setScanned] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [mlPrediction, setMlPrediction] = useState(null);
 
   const errorCount = findings.filter(
     (finding) => finding.severity?.toUpperCase() === "ERROR"
@@ -50,6 +51,7 @@ function App() {
     setLoading(true);
     setScanError("");
     setFindings([]);
+    setMlPrediction(null);
     setScanned(false);
 
     try {
@@ -72,6 +74,7 @@ function App() {
       }
 
       setFindings(data.findings ?? []);
+      setMlPrediction(data.ml_prediction ?? null);
       setScanned(true);
     } catch (err) {
       setScanError(err.message || "Unable to scan the code.");
@@ -456,6 +459,118 @@ function App() {
                 </div>
               ))}
             </div>
+            
+            {/* ML Prediction Card */}
+            {mlPrediction && (
+              <div
+                style={{
+                  marginBottom: "28px",
+                  padding: "24px",
+                  border: "1px solid #cbd5e1",
+                  borderLeft: `6px solid ${
+                    mlPrediction.prediction === "risky_like"
+                      ? "#b45309"
+                      : "#15803d"
+                  }`,
+                  borderRadius: "8px",
+                  backgroundColor: "#ffffff",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                  }}
+                >
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "18px", color: "#0f172a" }}>
+                      ML-Based Code Classification
+                    </h3>
+
+                    <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#64748b" }}>
+                      TF-IDF + Logistic Regression
+                    </p>
+                  </div>
+
+                  <span
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: "9999px",
+                      fontWeight: "800",
+                      fontSize: "13px",
+                      backgroundColor:
+                        mlPrediction.prediction === "risky_like"
+                          ? "#fef3c7"
+                          : "#dcfce7",
+                      color:
+                        mlPrediction.prediction === "risky_like"
+                          ? "#92400e"
+                          : "#166534",
+                    }}
+                  >
+                    {mlPrediction.prediction === "risky_like"
+                      ? "RISKY-LIKE"
+                      : "SAFE-LIKE"}
+                  </span>
+                </div>
+
+                <div style={{ marginTop: "20px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "8px",
+                      fontSize: "14px",
+                      fontWeight: "700",
+                      color: "#334155",
+                    }}
+                  >
+                    <span>Risk score</span>
+                    <span>
+                      {(mlPrediction.risk_score * 100).toFixed(2)}%
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      height: "10px",
+                      backgroundColor: "#e2e8f0",
+                      borderRadius: "999px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${mlPrediction.risk_score * 100}%`,
+                        height: "100%",
+                        backgroundColor:
+                          mlPrediction.prediction === "risky_like"
+                            ? "#d97706"
+                            : "#16a34a",
+                        borderRadius: "999px",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <p
+                  style={{
+                    margin: "16px 0 0",
+                    fontSize: "13px",
+                    lineHeight: "1.6",
+                    color: "#475569",
+                  }}
+                >
+                  This is an ML classification of code patterns, not a verified
+                  probability that the code contains a vulnerability. Review
+                  Semgrep findings and the source code before making security decisions.
+                </p>
+              </div>
+            )}
+
 
             {/* Findings List or Clean State */}
             {findings.length === 0 ? (
