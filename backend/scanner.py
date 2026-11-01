@@ -70,6 +70,18 @@ def _resolve_semgrep_command() -> list[str]:
         if local_script.exists():
             candidates.append(str(local_script))
 
+    # Check the existing user-level Semgrep installation on Windows.
+    user_semgrep = (
+        Path.home()
+        / "AppData"
+        / "Local"
+        / "CodeGuardSemgrep"
+        / "Scripts"
+        / "pysemgrep.exe"
+    )
+    if user_semgrep.is_file():
+        candidates.append(str(user_semgrep))
+
     if candidates:
         return [candidates[0]]
 
