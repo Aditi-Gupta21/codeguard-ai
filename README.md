@@ -1,90 +1,259 @@
 # CodeGuard AI
 
-> Automated static code analysis and security vulnerability scanner for Python applications.
+**Find bugs. Understand risks. Write safer code.**
 
-CodeGuard AI inspects Python source code for security vulnerabilities, insecure design patterns, and exposed secrets using [Semgrep](https://semgrep.dev/) static analysis with tailored rule sets. Findings include actionable remediation advice, line-by-line code context, severity indicators, and downloadable audit reports.
+CodeGuard AI is an AI-assisted Python code security analyzer that combines **Semgrep rule-based static analysis** with a **machine learning code classifier**. It scans submitted Python source code for selected security weaknesses, explains detected findings, suggests remediation steps, and displays an ML-based `risky_like` or `safe_like` classification.
+
+The project is a working prototype intended to demonstrate how traditional static analysis and supervised machine learning can complement each other in a developer-focused security workflow.
+
+![CodeGuard AI dashboard](assets/ui-dashboard.png)
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [How It Works](#how-it-works)
+- [Supported Security Checks](#supported-security-checks)
+- [Machine Learning Model](#machine-learning-model)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [API Reference](#api-reference)
+- [Limitations](#limitations)
+- [Future Scope](#future-scope)
+- [License](#license)
 
 ---
 
 ## Features
 
-- **Static Analysis**: Scans source code safely in isolated temporary workspaces without executing untrusted code.
-- **Vulnerability Detection**: Identifies critical vulnerability classes including SQL injection, command execution, unsafe deserialization, insecure temporary files, hardcoded secrets, and dangerous `eval()` usage.
-- **Actionable Remediation**: Every detection includes step-by-step guidance and recommended secure alternatives.
-- **Deduplication Filter**: Eliminates redundant findings sharing identical rule IDs, line boundaries, and code snippets.
-- **Audit Report Export**: Downloads complete security reports formatted as structured JSON with summary counts by severity.
-- **Live Web Dashboard**: Interactive React frontend featuring real-time health checks, code editor, summary cards, and responsive finding views.
+- **Rule-based static analysis:** Uses Semgrep and custom Python security rules to identify selected vulnerability patterns.
+- **ML-based code classification:** Uses character-level TF-IDF features and Logistic Regression to classify code as `risky_like` or `safe_like`.
+- **Combined scan response:** The `/scan` endpoint returns Semgrep findings alongside the ML prediction.
+- **Actionable findings:** Displays severity, category, explanation, affected code, file/line information, and remediation guidance when a rule matches.
+- **Interactive dashboard:** React interface for submitting Python code and viewing scan results.
+- **Severity summary:** Displays total findings and counts for errors, warnings, and informational findings.
+- **Risk score visualization:** Shows the ML model's score alongside its predicted class.
+- **JSON report export:** Downloads a structured Semgrep security report through `/scan/report`.
+- **Health endpoint:** Provides a backend health check through `/health`.
+
+> **Important:** The ML risk score is a model output for the `risky_like` class. It is not a calibrated probability that the submitted code contains a vulnerability. A `safe_like` prediction does not override a Semgrep finding.
 
 ---
 
-## Architecture
+## Screenshots
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       React Frontend                        │
-│   (Vite + React 19: Code Editor, Metrics, Report Exporter)  │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ HTTP / JSON
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      FastAPI Backend                        │
-│   - POST /scan        -> Returns structured findings        │
-│   - POST /scan/report -> Returns downloadable JSON report   │
-│   - GET  /health      -> Health probe                       │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Semgrep Scanner Engine                   │
-│   - Sandboxed temporary workspace execution                 │
-│   - Rule definitions: semgrep-rules/python-security.yml     │
-│   - Parse warning tolerance & deduplication normalizer      │
-└─────────────────────────────────────────────────────────────┘
-```
+### Dashboard
+
+![CodeGuard AI dashboard](assets/ui-dashboard.png)
+
+### Semgrep detection and remediation
+
+![Semgrep finding with severity and remediation](assets/semgrep-scan-result.png)
+
+### ML-based classification in the dashboard
+
+![ML classification result for risky code](assets/ml-classification-result.png)
+
+### Model evaluation
+
+The model was evaluated using a stratified random 80:20 split of the 250-example dataset. The test split contained 50 examples.
+
+![Previous and updated model performance comparison](assets/model-performance-comparison.png)
+
+![Confusion matrix for the updated model](assets/confusion-matrix.png)
+
+### Dataset expansion and prediction tests
+
+![Dataset before and after comparison](assets/dataset-before-after.png)
+
+![Manual ML prediction comparison](assets/prediction-comparison.png)
+
+![Model training and evaluation terminal output](assets/training-evaluation-terminal.png)
+
+![Manual ML prediction test output](assets/prediction-tests-terminal.png)
 
 ---
 
-## Supported Security Rules
+## How It Works
 
-| Rule ID | Category | Severity | Description | Recommended Remediation |
-|---|---|---|---|---|
-| `python-dangerous-eval` | Code Injection | `WARNING` | Detects arbitrary code execution via `eval()`. | Avoid `eval()` on untrusted input. Use `ast.literal_eval()` for literals or parse structured data explicitly. |
-| `python-hardcoded-secret` | Hardcoded Secrets | `WARNING` | Detects hardcoded API keys, passwords, and tokens. | Store credentials in environment variables or a dedicated secrets manager. Rotate exposed credentials. |
-| `python-sql-injection-fstring` | SQL Injection | `WARNING` | Detects raw SQL queries constructed via f-strings. | Use parameterized database queries supported by your database driver. Never format user strings directly into SQL. |
-| `python-unsafe-pickle` | Unsafe Deserialization | `ERROR` | Flags deserialization of untrusted payloads with `pickle`. | Avoid `pickle` on untrusted data. Use safer interchange formats such as JSON or Protocol Buffers. |
-| `python-command-injection` | Command Injection | `ERROR` | Detects shell executions constructed from user input. | Avoid dynamic shell commands. Prefer list-based execution (`subprocess.run(["cmd", "arg"])`) and avoid `shell=True`. |
-| `python-unsafe-tempfile` | Insecure File Handling | `WARNING` | Catches insecure temporary file paths via `mktemp()`. | Use `tempfile.NamedTemporaryFile` or `tempfile.TemporaryDirectory` to prevent predictable path collisions. |
+The application uses two complementary analysis paths:
+
+1. A user submits Python source code through the React frontend.
+2. FastAPI receives the code through `POST /scan`.
+3. Semgrep scans the submitted source using the configured custom rules.
+4. The ML pipeline transforms the source into character-level TF-IDF features.
+5. Logistic Regression predicts `risky_like` or `safe_like` and returns a risk score.
+6. FastAPI returns both the Semgrep findings and the ML result.
+7. The React dashboard displays the results.
+
+```text
+                  Python Source Code
+                          |
+                          v
+                 React + Vite Frontend
+                          |
+                       HTTP/JSON
+                          |
+                          v
+                    FastAPI Backend
+                          |
+              +-----------+-----------+
+              |                       |
+              v                       v
+        Semgrep Scanner          ML Classifier
+        Custom YAML Rules        TF-IDF + Logistic
+              |                       |
+              v                       v
+       Security Findings        Class + Risk Score
+              |                       |
+              +-----------+-----------+
+                          |
+                          v
+                 Combined /scan Response
+                          |
+                          v
+                  Results Dashboard
+```
+
+The two outputs should be interpreted together. Semgrep findings remain visible even if the ML classifier predicts `safe_like`.
+
+---
+
+## Supported Security Checks
+
+The custom Semgrep rules in the project cover the following categories:
+
+| Rule ID | Category | Severity | Description |
+|---|---|---|---|
+| `python-dangerous-eval` | Code Injection | `WARNING` | Detects potentially unsafe use of `eval()`. |
+| `python-hardcoded-secret` | Hardcoded Secrets | `WARNING` | Detects hardcoded credentials, keys, or tokens matching the rule patterns. |
+| `python-sql-injection-fstring` | SQL Injection | `WARNING` | Detects selected unsafe SQL query construction patterns. |
+| `python-unsafe-pickle` | Unsafe Deserialization | `ERROR` | Flags selected uses of `pickle` deserialization. |
+| `python-command-injection` | Command Injection | `ERROR` | Detects selected unsafe shell/command execution patterns. |
+| `python-unsafe-tempfile` | Insecure File Handling | `WARNING` | Detects insecure temporary-file creation using `mktemp()` patterns. |
+
+Detection depends on the configured Semgrep rules. This list does not imply that every possible vulnerability in each category will be detected.
+
+---
+
+## Machine Learning Model
+
+### Dataset
+
+The current training dataset contains **250 labelled Python code examples**:
+
+| Class | Label | Examples |
+|---|---:|---:|
+| Risky-like | 1 | 105 |
+| Safe-like | 0 | 145 |
+| **Total** | | **250** |
+
+Examples cover dynamic code execution, hardcoded credentials, SQL injection, unsafe deserialization, command execution, safer alternatives, and general Python code.
+
+### Model pipeline
+
+- **Feature extraction:** `TfidfVectorizer`
+- **Analyzer:** Character-level
+- **N-gram range:** 2–5
+- **Maximum features:** 5,000
+- **Classifier:** Logistic Regression
+- **Maximum iterations:** 1,000
+- **Class weighting:** Balanced
+- **Train/test split:** 80:20, stratified, with `random_state=42`
+- **Model persistence:** Joblib
+
+### Current evaluation results
+
+| Metric | Result |
+|---|---:|
+| Accuracy | 98.00% |
+| Precision | 95.45% |
+| Recall | 100.00% |
+| F1-score | 97.67% |
+| Training examples | 200 |
+| Testing examples | 50 |
+
+Confusion matrix (rows = actual class; columns = predicted class; class order = safe-like, risky-like):
+
+```text
+                 Predicted
+                 Safe  Risky
+Actual Safe       28     1
+Actual Risky       0    21
+```
+
+These are preliminary results from a small, manually constructed dataset and a random split. Similar examples may occur in both training and testing subsets. The metrics should not be interpreted as production-level performance or as proof of generalization to unseen repositories. Independent evaluation on a larger, separately collected dataset is still needed.
+
+### Manual prediction checks
+
+The seven selected manual test cases produced the expected class in the recorded tests:
+
+- **Risky-like:** `eval(user_input)`, `pickle.loads(user_data)`, SQL injection example.
+- **Safe-like:** `print(123)`, arithmetic, a simple function, environment-variable access.
+
+These are functional sanity checks, not a separate benchmark or an additional accuracy estimate.
 
 ---
 
 ## Technology Stack
 
-- **Backend**: Python 3.10+, FastAPI, Uvicorn, Pydantic v2
-- **Scanner Engine**: Semgrep 1.x
-- **Frontend**: React 19, Vite 8, Plain CSS
+| Layer | Technologies |
+|---|---|
+| Frontend | React, Vite, JavaScript, CSS |
+| Backend | Python, FastAPI, Uvicorn |
+| Static analysis | Semgrep |
+| ML and data processing | Scikit-learn, pandas, NumPy |
+| Text representation | TF-IDF character n-grams |
+| Classification | Logistic Regression |
+| Model persistence | Joblib |
+| Report format | JSON |
 
 ---
 
 ## Project Structure
 
-```
+```text
 codeguard-ai/
 ├── backend/
-│   ├── main.py              # FastAPI application, routing, and CORS
-│   ├── scanner.py           # Scanner core, Semgrep integration, report builder
-│   └── requirements.txt     # Python dependencies
+│   ├── main.py
+│   ├── scanner.py
+│   ├── requirements.txt
+│   └── ml/
+│       ├── __init__.py
+│       ├── predict.py
+│       ├── train_model.py
+│       ├── test_predict.py
+│       ├── dataset/
+│       │   ├── create_dataset.py
+│       │   └── security_dataset.csv
+│       └── models/
+│           ├── security_classifier.joblib
+│           └── evaluation_metrics.json
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx          # Dashboard, code input, metrics, export button
-│   │   ├── main.jsx         # React application entry point
-│   │   ├── index.css        # Base styling
-│   │   └── App.css          # Application layout styles
-│   ├── index.html           # HTML shell
-│   └── package.json         # Frontend dependencies and scripts
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   ├── index.css
+│   │   └── App.css
+│   ├── index.html
+│   └── package.json
 ├── semgrep-rules/
-│   └── python-security.yml  # Semgrep YAML security rules
-├── .gitignore               # Ignored environments, caches, and build outputs
-└── README.md                # Project documentation
+│   └── python-security.yml
+├── assets/
+│   ├── ui-dashboard.png
+│   ├── semgrep-scan-result.png
+│   ├── ml-classification-result.png
+│   ├── model-performance-comparison.png
+│   ├── confusion-matrix.png
+│   ├── dataset-before-after.png
+│   ├── prediction-comparison.png
+│   ├── training-evaluation-terminal.png
+│   └── prediction-tests-terminal.png
+├── .gitignore
+└── README.md
 ```
 
 ---
@@ -93,199 +262,208 @@ codeguard-ai/
 
 ### Prerequisites
 
-- **Python**: 3.10 or higher
-- **Node.js**: 18.0 or higher
-- **npm**: 9.0 or higher
+- Python 3.10 or newer
+- Node.js and npm
+- Git
+- Semgrep CLI installed separately and available to the backend scanner
 
-### 1. Backend Setup
+> On Windows, Semgrep may need to be installed separately from the Python dependencies. Follow the Semgrep installation method configured for your environment. The project's `requirements.txt` does not install the Semgrep CLI.
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Aditi-Gupta21/codeguard-ai.git
+cd codeguard-ai
+```
+
+### 2. Set up the backend
 
 ```bash
 cd backend
 
-# Create virtual environment
 python -m venv .venv
-
-# Activate virtual environment
-# Windows (PowerShell):
-.\.venv\Scripts\Activate.ps1
-# macOS / Linux:
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start the API server
-uvicorn main:app --reload --port 8001
 ```
 
-The API will be accessible at `http://127.0.0.1:8001`.
+Activate the environment.
 
-### 2. Frontend Setup
+**Windows PowerShell:**
 
-In a separate terminal:
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+**macOS/Linux:**
+
+```bash
+source .venv/bin/activate
+```
+
+Install Python dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Start the API from the `backend` directory:
+
+```bash
+python -m uvicorn main:app --reload --host 127.0.0.1 --port 8001
+```
+
+Backend base URL:
+
+```text
+http://127.0.0.1:8001
+```
+
+Interactive API documentation:
+
+```text
+http://127.0.0.1:8001/docs
+```
+
+### 3. Set up the frontend
+
+Open a second terminal from the repository root:
 
 ```bash
 cd frontend
-
-# Install Node dependencies
 npm install
-
-# Start development server
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+Open the Vite URL shown in the terminal, normally:
+
+```text
+http://localhost:5173
+```
+
+Ensure the frontend API base URL points to the backend running on port `8001`.
+
+### 4. Retrain the ML model (optional)
+
+From the repository root, with the backend virtual environment activated:
+
+```bash
+python backend/ml/dataset/create_dataset.py
+python -m backend.ml.train_model
+```
+
+The trained model and evaluation metrics are saved under `backend/ml/models/`.
+
+Run the manual prediction checks:
+
+```bash
+python -m backend.ml.test_predict
+```
 
 ---
 
 ## API Reference
 
+The examples below assume the backend is running at `http://127.0.0.1:8001`.
+
 ### `GET /`
 
-Root connectivity probe.
+Checks backend connectivity.
 
 ```bash
 curl http://127.0.0.1:8001/
 ```
 
-**Response (`200 OK`):**
-```json
-{
-  "message": "CodeGuard AI backend is running!"
-}
-```
-
----
-
 ### `GET /health`
 
-Health check endpoint.
+Checks backend health.
 
 ```bash
 curl http://127.0.0.1:8001/health
 ```
 
-**Response (`200 OK`):**
-```json
-{
-  "status": "healthy"
-}
-```
-
----
-
 ### `POST /scan`
 
-Scans Python code and returns individual findings.
+Scans submitted Python code and returns Semgrep findings together with the ML classification.
 
 ```bash
 curl -X POST http://127.0.0.1:8001/scan \
   -H "Content-Type: application/json" \
-  -d '{"code": "import os\nos.system(\"rm -rf \" + user_input)"}'
+  -d "{\"code\":\"user_input = input()\\nresult = eval(user_input)\"}"
 ```
 
-**Response (`200 OK`):**
+Example response shape:
+
 ```json
 {
-  "findings": [
-    {
-      "rule_id": "python-command-injection",
-      "severity": "ERROR",
-      "category": "Command Injection",
-      "message": "Dynamic input executed in shell command can lead to command injection.",
-      "remediation": "Avoid building shell commands from user-controlled input. Prefer direct API calls and avoid shell=True unless absolutely necessary.",
-      "file_path": "sample.py",
-      "start_line": 2,
-      "end_line": 2,
-      "code_snippet": "os.system(\"rm -rf \" + user_input)"
-    }
-  ],
-  "total_findings": 1
-}
-```
-
----
-
-### `POST /scan/report`
-
-Scans Python code and returns a complete downloadable JSON report with summary statistics.
-
-```bash
-curl -X POST http://127.0.0.1:8001/scan/report \
-  -H "Content-Type: application/json" \
-  -d '{"code": "eval(input())"}'
-```
-
-**Response Headers:**
-```
-Content-Disposition: attachment; filename="codeguard-report.json"
-```
-
-**Response Body (`200 OK`):**
-```json
-{
-  "report_version": "1.0",
-  "generated_at": "2026-10-28T14:50:00+00:00",
-  "scanner": "CodeGuard AI / Semgrep",
-  "summary": {
-    "total_findings": 1,
-    "severity_counts": {
-      "WARNING": 1
-    }
-  },
   "findings": [
     {
       "rule_id": "python-dangerous-eval",
       "severity": "WARNING",
       "category": "Code Injection",
-      "message": "Use of eval() can execute arbitrary code with the current process privileges.",
+      "message": "Use of eval() can execute arbitrary code. Avoid evaluating untrusted input.",
       "remediation": "Avoid eval() on untrusted input. Use safer alternatives such as ast.literal_eval() for supported Python literals, or parse the specific input format explicitly.",
       "file_path": "sample.py",
-      "start_line": 1,
-      "end_line": 1,
-      "code_snippet": "eval(input())"
+      "start_line": 2,
+      "end_line": 2,
+      "code_snippet": "result = eval(user_input)"
     }
-  ]
+  ],
+  "total_findings": 1,
+  "ml_prediction": {
+    "prediction": "risky_like",
+    "risk_score": 0.5826,
+    "model": "TF-IDF + Logistic Regression"
+  }
 }
+```
+
+The risk score above is an illustrative observed response. Actual values depend on the submitted source code and the loaded model.
+
+### `POST /scan/report`
+
+Scans submitted code and returns a downloadable JSON report containing the Semgrep findings and summary. In the current implementation, this report endpoint is Semgrep-based; it does not include the ML prediction.
+
+```bash
+curl -X POST http://127.0.0.1:8001/scan/report \
+  -H "Content-Type: application/json" \
+  -d "{\"code\":\"eval(input())\"}" \
+  -o codeguard-report.json
+```
+
+The response is delivered with a downloadable filename:
+
+```text
+codeguard-report.json
 ```
 
 ---
 
-## Scan Report Schema
+## Limitations
 
-Exported reports adhere to the following structure:
+- The current ML dataset is small and manually prepared.
+- The classifier predicts patterns similar to those represented in its training data; it does not understand program behavior like a full security auditor.
+- The reported test metrics come from a random split and may be optimistic if related examples appear in both subsets.
+- The risk score is not a calibrated vulnerability probability.
+- Semgrep detection is limited to the configured rules and supported patterns.
+- The current implementation focuses on Python source code.
+- A clean scan does not guarantee that code is secure.
 
-```json
-{
-  "report_version": "1.0",
-  "generated_at": "ISO-8601 UTC Timestamp",
-  "scanner": "CodeGuard AI / Semgrep",
-  "summary": {
-    "total_findings": 0,
-    "severity_counts": {
-      "ERROR": 0,
-      "WARNING": 0,
-      "INFO": 0
-    }
-  },
-  "findings": [
-    {
-      "rule_id": "string",
-      "severity": "ERROR | WARNING | INFO",
-      "category": "string",
-      "message": "string",
-      "remediation": "string",
-      "file_path": "string",
-      "start_line": 1,
-      "end_line": 1,
-      "code_snippet": "string"
-    }
-  ]
-}
-```
+---
+
+## Future Scope
+
+- Expand the dataset with diverse, independently labelled code examples.
+- Evaluate using repository-level and independently collected test data.
+- Add support for more programming languages.
+- Explore transformer-based code models.
+- Integrate an LLM to produce context-aware explanations and remediation suggestions.
+- Add Retrieval-Augmented Generation (RAG) using trusted security documentation.
+- Support complete Git repository scanning and CI/CD integration.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [`LICENSE`](LICENSE) file for details, if included in the repository.
+
+---
+
+**CodeGuard AI — Find bugs. Understand risks. Write safer code.**
