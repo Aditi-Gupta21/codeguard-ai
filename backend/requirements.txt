@@ -1,3 +1,12 @@
+# Backend API
 fastapi>=0.140.0,<0.145.0
 uvicorn[standard]
-semgrep
+
+# Machine Learning and Data Processing
+pandas==3.1.0
+scikit-learn==1.9.1
+joblib==1.6.0
+matplotlib==3.11.2
+
+# Security Scanner
+# Semgrep is installed separately on Windows.

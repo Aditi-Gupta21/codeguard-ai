@@ -1,0 +1,347 @@
+code,label
+eval(user_input),1
+exec(request.args.get('code')),1
+result = eval(expression),1
+exec(input('Enter code: ')),1
+eval(data_from_request),1
+eval(formula),1
+exec(code_string),1
+exec(request.data),1
+eval(request.form['expression']),1
+eval(input()),1
+eval(request.json['expression']),1
+exec(user_code),1
+output = eval(untrusted_expression),1
+exec(open('script.txt').read()),1
+result = eval(query_string),1
+eval(request.GET['value']),1
+exec(serialized_code),1
+eval(formula_from_user),1
+exec(payload.decode()),1
+result = eval(input_data),1
+password = 'admin123',1
+API_KEY = 'sk_test_123456',1
+SECRET_KEY = 'my_secret_key',1
+database_password = 'root123',1
+token = 'private_access_token',1
+password = 'Password@123',1
+aws_secret = 'AKIA123456789',1
+SECRET = 'super_secret_value',1
+API_TOKEN = 'token_123456',1
+SECRET_KEY = 'hardcoded-secret',1
+DB_PASSWORD = 'mypassword123',1
+GITHUB_TOKEN = 'ghp_123456789',1
+AWS_SECRET_ACCESS_KEY = 'secret123',1
+private_key = '-----BEGIN PRIVATE KEY-----',1
+password = 'company@2026',1
+client_secret = 'abc123secret',1
+access_token = 'hardcoded-token',1
+smtp_password = 'mailpassword',1
+JWT_SECRET = 'myjwtsecret',1
+DATABASE_URL = 'mysql://root:password@localhost/db',1
+"query = f""SELECT * FROM users WHERE name = '{username}'""",1
+"query = ""SELECT * FROM users WHERE id = "" + user_id",1
+"cursor.execute(""SELECT * FROM users WHERE name = '"" + name + ""'"")",1
+"sql = f""DELETE FROM accounts WHERE id = {account_id}""",1
+"query = ""SELECT * FROM products WHERE id = %s"" % product_id",1
+"query = f""UPDATE users SET role = '{role}'""",1
+"db.execute(f""SELECT * FROM users WHERE id={uid}"")",1
+"query = f""SELECT * FROM orders WHERE id={order_id}""",1
+cursor.execute(query + user_input),1
+db.execute('SELECT * FROM users WHERE id=' + user_id),1
+"sql = f""SELECT * FROM employees WHERE name = '{name}'""",1
+"query = ""DELETE FROM users WHERE id="" + str(user_id)",1
+"cursor.execute(f""SELECT * FROM accounts WHERE id={account_id}"")",1
+"sql = f""UPDATE products SET price={price} WHERE id={product_id}""",1
+"query = ""SELECT * FROM users WHERE email='"" + email + ""'""",1
+"db.execute(f""DELETE FROM sessions WHERE id={session_id}"")",1
+"sql = ""SELECT * FROM orders WHERE status='"" + status + ""'""",1
+"query = f""SELECT * FROM payments WHERE id={payment_id}""",1
+"cursor.execute(""UPDATE users SET role='"" + role + ""'"")",1
+"query = f""SELECT * FROM customers WHERE city='{city}'""",1
+pickle.loads(user_data),1
+"pickle.load(open('data.pkl', 'rb'))",1
+obj = pickle.loads(request.body),1
+data = pickle.loads(serialized_input),1
+pickle.loads(untrusted_bytes),1
+pickle.loads(data),1
+pickle.load(file_object),1
+pickle.loads(payload),1
+pickle.loads(request.get_data()),1
+pickle.loads(untrusted_payload),1
+result = pickle.loads(network_data),1
+obj = pickle.loads(uploaded_file),1
+pickle.loads(request.data),1
+"data = pickle.load(open(user_file, 'rb'))",1
+value = pickle.loads(external_payload),1
+pickle.loads(client_data),1
+record = pickle.loads(raw_bytes),1
+"pickle.load(open('upload.pkl', 'rb'))",1
+decoded = pickle.loads(user_payload),1
+pickle.loads(received_data),1
+"subprocess.call(user_input, shell=True)",1
+os.system(command),1
+os.popen(user_command),1
+"subprocess.run('ping ' + host, shell=True)",1
+"subprocess.Popen(command, shell=True)",1
+os.system('rm -rf ' + folder),1
+"subprocess.run(command, shell=True)",1
+os.system('curl ' + url),1
+"subprocess.Popen(user_input, shell=True)",1
+os.system(user_input),1
+"subprocess.call('cat ' + filename, shell=True)",1
+os.system('ping ' + hostname),1
+"subprocess.run('echo ' + message, shell=True)",1
+os.popen('ls ' + directory),1
+"subprocess.Popen('grep ' + pattern, shell=True)",1
+os.system('wget ' + download_url),1
+"subprocess.call(command_string, shell=True)",1
+os.system('rm ' + user_file),1
+"subprocess.run('python ' + script_name, shell=True)",1
+os.popen(user_command_string),1
+"user_input = input(""Enter expression: "")
+result = eval(user_input)
+print(result)",1
+"def calculate(expression):
+    return eval(expression)
+
+user_expression = input(""Enter formula: "")
+print(calculate(user_expression))",1
+"def get_user(cursor, user_id):
+    query = f""SELECT * FROM users WHERE id = {user_id}""
+    cursor.execute(query)
+    return cursor.fetchall()",1
+"def load_user_data(request):
+    import pickle
+    user_data = request.data
+    return pickle.loads(user_data)",1
+"import subprocess
+
+filename = input(""Enter filename: "")
+subprocess.run(""cat "" + filename, shell=True)",1
+result = int(user_input),0
+data = json.loads(user_input),0
+value = ast.literal_eval(expression),0
+result = math.sqrt(number),0
+config = json.loads(config_text),0
+data = json.loads(payload),0
+parsed = ast.literal_eval(user_input),0
+value = float(user_input),0
+result = sum(numbers),0
+safe_data = ast.literal_eval(text),0
+password = os.getenv('DB_PASSWORD'),0
+API_KEY = os.environ.get('API_KEY'),0
+secret = os.getenv('SECRET_KEY'),0
+token = os.environ['ACCESS_TOKEN'],0
+db_password = os.getenv('DATABASE_PASSWORD'),0
+token = os.environ.get('TOKEN'),0
+API_KEY = os.getenv('SERVICE_API_KEY'),0
+secret_key = secrets.token_hex(32),0
+password = os.environ.get('PASSWORD'),0
+secret = os.environ.get('APP_SECRET'),0
+"cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))",0
+"cursor.execute('SELECT * FROM users WHERE name = %s', (name,))",0
+query = 'SELECT * FROM products WHERE id = ?',0
+"db.execute('DELETE FROM users WHERE id = ?', (user_id,))",0
+"cursor.execute('UPDATE users SET role = ? WHERE id = ?', (role, uid))",0
+"cursor.execute('SELECT * FROM users WHERE email = ?', (email,))",0
+"db.execute('SELECT * FROM accounts WHERE id = ?', (account_id,))",0
+"cursor.execute('SELECT * FROM orders WHERE id = ?', (order_id,))",0
+"cursor.execute('INSERT INTO users(name) VALUES (?)', (name,))",0
+"cursor.execute('DELETE FROM sessions WHERE id = ?', (session_id,))",0
+data = json.loads(serialized_input),0
+config = yaml.safe_load(config_text),0
+obj = json.loads(request.body),0
+records = json.load(file_object),0
+data = ast.literal_eval(serialized_data),0
+config = yaml.safe_load(file),0
+data = json.loads(response_text),0
+config = json.loads(config_string),0
+records = json.load(file),0
+data = json.load(open('data.json')),0
+"subprocess.run(['ping', host], shell=False)",0
+"subprocess.run(['ls', '-l'], check=True)",0
+"subprocess.run(['python', 'script.py'], check=True)",0
+"subprocess.run(['echo', message], shell=False)",0
+"subprocess.Popen(['git', 'status'], shell=False)",0
+"subprocess.run(['curl', url], check=True)",0
+"subprocess.run(['cat', filename], shell=False)",0
+"subprocess.run(['ping', '-c', '1', host], check=True)",0
+"subprocess.run(['git', 'log'], check=True)",0
+"subprocess.Popen(['echo', 'hello'])",0
+name = 'Aditi',0
+age = 22,0
+price = 99.50,0
+is_active = True,0
+message = 'Hello World',0
+"numbers = [1, 2, 3, 4, 5]",0
+"student = {'name': 'Aditi', 'age': 22}",0
+"unique_values = {1, 2, 3}",0
+"coordinates = (10, 20)",0
+count = len(numbers),0
+total = 10 + 20,0
+difference = 50 - 15,0
+product = 5 * 6,0
+average = sum(numbers) / len(numbers),0
+remainder = 17 % 5,0
+power = 2 ** 5,0
+is_equal = (10 == 10),0
+is_valid = age >= 18,0
+result = first + second,0
+percentage = obtained / total * 100,0
+"def add(a, b):
+    return a + b",0
+"def greet(name):
+    return 'Hello ' + name",0
+"def square(number):
+    return number * number",0
+"def is_even(number):
+    return number % 2 == 0",0
+"def calculate_total(items):
+    return sum(items)",0
+"def get_name(user):
+    return user.get('name')",0
+"def multiply(a, b):
+    return a * b",0
+"def maximum(a, b):
+    return max(a, b)",0
+"def reverse_text(text):
+    return text[::-1]",0
+"def display_message():
+    print('Welcome')",0
+"for number in numbers:
+    print(number)",0
+"for i in range(10):
+    print(i)",0
+"if age >= 18:
+    print('Adult')",0
+"if score >= 40:
+    result = 'Pass'",0
+"while count > 0:
+    count -= 1",0
+"for item in items:
+    total += item",0
+"if name:
+    print(name)",0
+"if x > y:
+    maximum = x
+else:
+    maximum = y",0
+"for key, value in student.items():
+    print(key, value)",0
+"if not numbers:
+    print('Empty list')",0
+numbers.append(6),0
+first_item = numbers[0],0
+numbers.sort(),0
+student['course'] = 'MCA',0
+keys = list(student.keys()),0
+values = list(student.values()),0
+unique_numbers = set(numbers),0
+squares = [x * x for x in range(5)],0
+filtered = [x for x in numbers if x > 2],0
+"student.pop('age', None)",0
+"class Student:
+    pass",0
+"class Person:
+    def __init__(self, name):
+        self.name = name",0
+"class Calculator:
+    def add(self, a, b):
+        return a + b",0
+"class Animal:
+    def speak(self):
+        return 'Sound'",0
+student = Student(),0
+person = Person('Aditi'),0
+calculator = Calculator(),0
+"class Account:
+    def __init__(self, balance):
+        self.balance = balance",0
+"class Rectangle:
+    def area(self, width, height):
+        return width * height",0
+"class Shape:
+    pass",0
+"try:
+    result = int(value)
+except ValueError:
+    result = 0",0
+"try:
+    print(data)
+except NameError:
+    pass",0
+"try:
+    result = 10 / number
+except ZeroDivisionError:
+    result = 0",0
+"try:
+    file = open('data.txt')
+except FileNotFoundError:
+    print('Missing file')",0
+"try:
+    process()
+finally:
+    cleanup()",0
+"try:
+    load_data()
+except Exception as error:
+    print(error)",0
+"if number > 0:
+    print('Positive')",0
+"try:
+    value = values[0]
+except IndexError:
+    value = None",0
+"try:
+    result = float(text)
+except ValueError:
+    result = 0.0",0
+"try:
+    calculate()
+except TypeError:
+    print('Invalid type')",0
+"with open('data.txt', 'r') as file:
+    content = file.read()",0
+"with open('output.txt', 'w') as file:
+    file.write('Hello')",0
+content = Path('data.txt').read_text(),0
+lines = Path('data.txt').read_text().splitlines(),0
+"with open('data.csv', 'r') as file:
+    rows = file.readlines()",0
+file_exists = Path('data.txt').exists(),0
+file_size = Path('data.txt').stat().st_size,0
+Path('output').mkdir(exist_ok=True),0
+"with open('log.txt', 'a') as file:
+    file.write('Started')",0
+extension = Path('report.pdf').suffix,0
+current_time = datetime.now(),0
+"random_number = random.randint(1, 10)",0
+text = 'python programming'.upper(),0
+words = 'learn python'.split(),0
+"joined = ','.join(words)",0
+number = abs(-25),0
+"rounded = round(3.14159, 2)",0
+maximum = max(numbers),0
+minimum = min(numbers),0
+print('Hello World'),0
+"user_input = input(""Enter a number: "")
+number = int(user_input)
+print(number * 2)",0
+"import ast
+
+expression = input(""Enter a list: "")
+result = ast.literal_eval(expression)
+print(result)",0
+"def get_user(cursor, user_id):
+    query = ""SELECT * FROM users WHERE id = ?""
+    cursor.execute(query, (user_id,))
+    return cursor.fetchall()",0
+"import os
+
+database_password = os.getenv(""DATABASE_PASSWORD"")
+print(""Database configuration loaded"")",0
+"import subprocess
+
+filename = input(""Enter filename: "")
+subprocess.run([""cat"", filename], check=True)",0
